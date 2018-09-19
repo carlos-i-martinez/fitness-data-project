@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 sudo apt-get update
 sudo apt-get -y install build-essential libssl-dev python-dev libffi-dev python-pip git
-sudo pip install -r requirements.txt
+#sudo pip install cryptography pyjwt paho-mqtt tendo 

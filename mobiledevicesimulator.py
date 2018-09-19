@@ -30,8 +30,11 @@ import socket
 import random
 from random import randint
 import json
+import csv
 import jwt
 import paho.mqtt.client as mqtt
+from collections import OrderedDict
+
 
 def get_ip_address():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -189,7 +192,7 @@ def parse_command_line_args():
             help=('Expiration time, in minutes, for JWT tokens.'))
     parser.add_argument(
             '--csv_data_file',
-            default='fitbitsampledata.csv',
+            default='sample.csv',
             help='Sample CSV file to stream the data from.')
     return parser.parse_args()
 
@@ -197,49 +200,76 @@ def parse_command_line_args():
 # [START iot_mqtt_run]
 def main():
     args = parse_command_line_args()
-    ip = get_ip_address()
-    hostname = socket.gethostname()
+
+# Create our MQTT client. The client_id is a unique string that identifies
+#    this device. For Google Cloud IoT Core, it must be in the format below."""
+    client = mqtt.Client(
+            client_id=('projects/{}/locations/{}/registries/{}/devices/{}'
+                       .format(
+                               args.project_id,
+                               args.cloud_region,
+                               args.registry_id,
+                               args.device_id)))
+
+    # With Google Cloud IoT Core, the username field is ignored, and the
+    # password field is used to transmit a JWT to authorize the device.
+    client.username_pw_set(
+            username='unused',
+            password=create_jwt(
+                    args.project_id, args.private_key_file, args.algorithm))
+
+    # Enable SSL/TLS support.
+    client.tls_set(ca_certs=args.ca_certs)
+
+    # Register message callbacks. https://eclipse.org/paho/clients/python/docs/
+    # describes additional callbacks that Paho supports. In this example, the
+    # callbacks just print to standard out.
+    client.on_connect = on_connect
+    client.on_publish = on_publish
+    client.on_disconnect = on_disconnect
+
+    # Connect to the Google MQTT bridge.
+    client.connect(args.mqtt_bridge_hostname, args.mqtt_bridge_port)
+
+    # Start the network loop.
+    client.loop_start()
+
 
     # Publish to the events or state topic based on the flag.
     sub_topic = 'events' if args.message_type == 'event' else 'state'
 
     mqtt_topic = '/devices/{}/{}'.format(args.device_id, sub_topic)
 
-    jwt_iat = datetime.datetime.utcnow()
-    jwt_exp_mins = args.jwt_expires_minutes
-    client = get_client(
-        args.project_id, args.cloud_region, args.registry_id, args.device_id,
-        args.private_key_file, args.algorithm, args.ca_certs,
-        args.mqtt_bridge_hostname, args.mqtt_bridge_port)
-
-    #data_file = "./data/SampleData.json"
-
-
-
-    csvfile = args.csv_data_file
 
     #convert csv file to json file
-    jsonfile = open('file.json', 'w')
+    jsonfile = open('file1.json', 'w')
 
-    fieldnames = ("date","steps","caloriesburned","caloriesconsumed","minustesofsleep")
-    reader = csv.DictReader( csvfile, fieldnames)
+    reader = csv.reader(open('sample.csv','rU'))
+    headers = next(reader)
     for row in reader:
-        json.dump(row, jsonfile)
+        rowd = OrderedDict(zip(headers, row))
+        json.dump(rowd, jsonfile)
         jsonfile.write('\n')
-    data_file = jsonfile
+
+    jsonfile.close()
     
-    fr = open(data_file, 'r')
-    i = 1 
+
+    #read each line of json file to publish.
+    fr = open('file1.json', 'r')
+    i = 1
     for line in fr:
-        data = json.loads(line)   
-        # Publish "payload" to the MQTT topic. qos=1 means at least once
-        # delivery. Cloud IoT Core also supports qos=0 for at most once
-        # delivery.
-        payload = json.dumps(data)    # JSON object to string conversion
-        print('Publishing message #{}: \'{}\''.format(i, payload))
-        client.publish(mqtt_topic, payload, qos=1)
-        i += 1
-        #time.sleep(0.1)
+        	data = json.loads(line)
+
+        	# Publish "payload" to the MQTT topic. qos=1 means at least once
+        	# delivery. Cloud IoT Core also supports qos=0 for at most once
+        	# delivery.
+
+        	payload = json.dumps(data)    # JSON object to string conversion
+        	print('Publishing message {}: \'{}\''.format(i, payload))
+
+
+        	client.publish(mqtt_topic, payload, qos=1)
+        	i += 1
 
     # End the network loop and finish.
     client.loop_stop()
