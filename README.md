@@ -1,7 +1,7 @@
 # fitness-data-project
 <b>Demo on analyzing and aggregating fitness data on google cloud platform.</b>
 
-This project contains the code necessary to setup either a Google Cloud Compute Engine VM with a data simulation script in order to demonstrate a data pipeline involving the following google cloud platform services.
+This project contains the code necessary to setup a Google Cloud Compute Engine VM with a sample health data simulation script to demonstrate a data pipeline involving the following google cloud platform products.  
 
   1. Google Cloud Iot Core
   2. Google Cloud Compute Engine
@@ -10,6 +10,7 @@ This project contains the code necessary to setup either a Google Cloud Compute 
   5. Google Cloud BigQuery
   6. Google Cloud Storage
 
+The goal is to demo the data pipeline and visualize the member health data to analyze for trends and patterns.
 The instructions below use the Google Cloud SDK tools to access Google Cloud Platform products and services from the command line.
 
 ## Setup
